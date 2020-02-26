@@ -1,0 +1,207 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html lang="en">
+
+<head>
+    <meta content="width=device-width; charset="utf-8"/ >
+    <title>HTML5 Canvas 乳房影像標記註解</title>
+   
+    <style type="text/css">
+        canvas {
+            position: absolute; /*絕對定位*/
+            left: 0px;
+            top: 0px;
+            border: 3px double black;
+            /*外框設定 cursor:pointer; 游標圖案設定;*/
+        }
+
+ 
+
+        #canvas {
+            z-index: 100;
+            background-color: black;
+        }
+
+        #drawCanvas {
+            z-index: 1000;
+        }
+
+
+
+        #TextAreal {
+            height: 5px;
+            width: 0px;
+        }
+
+
+        #Button1 {
+            height: 48px;
+            width: 200px;
+        }
+        #Button2 {
+            height: 55px;
+            width: 197px;
+        }
+    </style>
+
+</head>
+<body style="width: 1405px; height: 1335px;">
+     <canvas id="canvas" width="650" height="840"></canvas>
+     <canvas id="drawCanvas" width="650" height="840"></canvas>  
+
+    <div id='tool' style="height: 290px; width: 300px; margin-left: 700px" class="auto-style3">
+  
+        <input id="Button1" onclick="Button1_onclick()" type="button" value="Show image" /><br />
+        <br />
+   
+        <p id="P1"></p>
+        <p id="P2"></p>
+
+   </div>
+</body>
+    <script type="text/javascript">
+        var canvas = document.getElementById("canvas");
+        var ctx = canvas.getContext("2d");
+        var drawCanvas = document.getElementById("drawCanvas");
+        var drawCtx = drawCanvas.getContext("2d");
+     /*   enlargeimage = document.getElementById("enlargeimage");
+        ectx = enlargeimage.getContext("2d");
+        */
+        ctx.strokeStyle = 'red';
+        drawCtx.strokeStyle = 'red';
+
+
+        // Load DICOM image binary data
+        var xhttp = new XMLHttpRequest(); //W3C標準  可容易地從URL取得資料而不用刷新頁面
+        xhttp.open('GET', "imgDir/01_Mass_210_Normal_L_MLO_1120_d4.BIN", true);
+       // xhttp.open('GET', "imgDir/01_Mass_210_Normal_L_MLO_1120_S640_832_d2.BIN", true);
+        xhttp.responseType = "arraybuffer"; //取得或設定實際回應類型
+        xhttp.onreadystatechange = function () { //指明要處理傳回值
+            if (xhttp.readyState == 4)  //0 (還沒開始)  1 (讀取中)  2 (已讀取)  3 (資訊交換中)  4 (一切完成)
+            {
+                dataview = new DataView(xhttp.response);
+            //    alert(dataview);
+            }
+        }
+        xhttp.send();
+
+        var Rows = 832;
+        var Columns = 640;
+        var Offset = 0;
+        var WindowCenter = 2047;
+        var WindowWidth = 4096;
+
+        //畫圖
+        function ShowImg() {
+          
+            var pvalue = new Array(Rows);
+            for (var i = 0; i < Rows; i++)
+                pvalue[i] = new Array(Columns);
+            Max = WindowCenter + WindowWidth / 2;
+            Min = WindowCenter - WindowWidth / 2;
+            var Value = 0;
+            //var z = 0, q = 0, temp = 0, temp2 = 0;
+        //    alert("aaa");
+            for (i = 0; i < Rows; i++) {
+                for (j = 0; j < Columns; j++) {
+                    var i1 = i * Columns + j;
+                    pvalue[i][j] = dataview.getUint16(Offset + 2 * (i1), true); // true for littel endian 在從檢視開頭算起的指定位元組位移處取得 Int16 值 (應該在緩衝區中擷取之值的位置 ; 如果是 false 或 undefined，就會讀取位元組由大到小的值，否則會讀取位元組由小到大的值)
+                    if (pvalue[i][j] >= Max) GrayValue = 255; // 灰階值 白
+                    else if (Min > pvalue[i][j]) GrayValue = 0; // 灰階值 黑    if ((pvalue[i][j] == 1) GrayValue = 0; for mammography
+                    else GrayValue = Math.round((pvalue[i][j] - Min) / WindowWidth * 256); //對數字做指定位數的四捨五入計算;電腦顯示值
+                    ctx.fillStyle = "rgb(" + GrayValue + "," + GrayValue + "," + GrayValue + ")"; //取得或設定圖樣，用來填滿 Circle 和 Line 圖形方法所建立的圖形(RR,GG,BB)
+                    ctx.fillRect(j, i, 1, 1); //x,y,從1,1畫
+                }
+            }
+          // alert("ccc");
+        }
+
+        function Button1_onclick() {
+  
+            ShowImg();
+            ShowSVG();
+        }
+
+        function ShowSVG() {
+
+            var Svgxhttp, SvgxmlDoc;
+            Svgxhttp = new XMLHttpRequest(); //W3C標準  可容易地從URL取得資料而不用刷新頁面
+            Svgxhttp.open("GET", "imgDir/SVG120.xml", false); //open(method,url,async)  (請求的類型:GET 或 POST;文件在服務端上的位置;true（異步）或 false（同步）)
+            Svgxhttp.send(); //將請求發送到服務端
+            SvgxmlDoc = Svgxhttp.responseXML; //獲得 XML 形式的回應數據
+
+            // load polygon point
+            var value = new Array(), count = 0;
+            svgtext = SvgxmlDoc.getElementsByTagName("polygon")[0];
+            pn = svgtext.getAttribute('points');
+            var point = pn.split(",");
+            for (var i in point) {
+                value[i] = point[i];
+                count++;
+            }
+            ctx.strokeStyle = "red";
+            ctx.lineWidth = 2;
+
+            ctx.moveTo(point[0] / 4, point[1]/ 4);
+            ctx.beginPath();
+            for (var i = 2; i < count; i++) {
+                ctx.lineTo(value[i]/4, value[i + 1]/4);
+                i = i + 1;
+            }
+            ctx.lineTo(value[0] / 4, value[1] / 4);
+            ctx.stroke();
+            //  ctx.closePath();
+
+            svgtext = SvgxmlDoc.getElementsByTagName("circle")[0];
+            cx = svgtext.getAttribute('cx')/4;
+            cy = svgtext.getAttribute('cy')/4;
+            cr = 1; //svgtext.getAttribute('r');
+   
+          //  ctx.fillStyle = "red";
+            ctx.strokeStyle ="red";
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(cx, cy, cr, (Math.PI / 180) * 0, (Math.PI / 180) * 360, false);
+            ctx.stroke();
+           // ctx.closePath();
+
+        }
+
+        var state = 1; //1=塗鴉 2=直線 3=圓形 4=橢圓形 5=正方形 6=長方形 7=橡皮擦 8=註解
+        var lastX = 0, lastY = 0, curX = 0, curY = 0, startX = 0, startY = 0;
+        var OriginX, OriginY;
+        var adjusting = false;
+        drawCanvas.onmousedown = function (e) {
+            adjusting = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            var coords = "Mouse down X coords: " + startX + ", Y coords: " + startY;
+            document.getElementById("P1").innerHTML = coords;
+          }
+        var nextCenter, nextWidth;
+        nextCenter = WindowCenter;
+        nextWidth = WindowWidth;
+        var coords = "Window center: " + nextCenter + ", Window width: " + nextWidth;
+        document.getElementById("P1").innerHTML = coords;
+        drawCanvas.onmousemove = function (e) {
+            if (adjusting == true) {
+                var x = e.clientX;
+                var y = e.clientY;
+                nextCenter = WindowCenter + x - startX;
+                nextWidth = WindowWidth + y - startY;
+                //var coords = "X coords: " + x + ", Y coords: " + y;
+                var coords = "Window center: " + nextCenter + ", Window width: " + nextWidth;
+                document.getElementById("P2").innerHTML = coords;
+            }
+        }
+        drawCanvas.onmouseup = function (e) {
+            if (adjusting == true) {
+                adjusting = false;
+                WindowCenter = nextCenter;
+                WindowWidth = nextWidth;
+                ShowImg();
+                ShowSVG();
+            }
+        }
+    </script>
+
+</html>
